@@ -4,6 +4,7 @@ function outputs = run_nn(k)
 filename = 'property000.mat';
 i = 1;
 no_of_files = 500;
+input_vector_size = 6;
 no_digits = size(num2str(no_of_files),2);
 y_star_lb = zeros(no_of_files, 1);
 results = zeros(no_of_files, 1);
@@ -13,7 +14,7 @@ while i <= no_of_files
     filename(9:11) = numstr;
     load(filename)
 
-    X = generate_inputs(xmax, xmin, k);
+    X = generate_inputs(xmax, xmin, k, input_vector_size);
     y = compute_nn_outputs(W,b,X);
     y_star_lb(i) = max(y);
     %mean_lb(i) = mean(y);

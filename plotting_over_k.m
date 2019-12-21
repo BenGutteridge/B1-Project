@@ -26,3 +26,5 @@ plot(counterexamples)
 title('Number of properties proven false by counter-example')
 xlabel('k (number of test inputs)')
 ylabel('Number of properties')
+
+task2_results = run_ibp(max_k);
