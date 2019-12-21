@@ -1,4 +1,4 @@
-function results = compare_with_groundtruth(input)
+function num_correct = compare_with_groundtruth(input)
 
 % 1x500 vector of whether each state is proven true (1) by counter-example
 % or false (0) by lack thereof
