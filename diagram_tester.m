@@ -16,4 +16,7 @@ X = generate_inputs(x_min, x_max, k, input_vector_size);
 value = compute_nn_outputs(W,b,X);
 
 % Task 2
-[y_min, y_max] = interval_bound_propagation(W, b, x_min, x_max);
+[y_min_t2, y_max_t2] = interval_bound_propagation(W, b, x_min, x_max);
+
+% Task 3
+[y_min_t3, y_max_t3] = linear_programming_bound(W,b,x_min,x_max);
