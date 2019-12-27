@@ -8,8 +8,6 @@ input_size = size(W{1},2);
 % First Layer (k=1)
 % don't need to apply relu to the inputs, hence no A or b needed
 % x = [zhat11, zhat12, x(1), x(2)]
-z_min = xmin;
-z_max = xmax;
 A = [];
 A_centre{1} = A;
 bnq = [];
@@ -21,7 +19,7 @@ ub = [Inf*ones(layer_size,1); xmax];
 lb = [-Inf*ones(layer_size,1) ;xmin];
 z_hat_min = zeros(layer_size,1);
 z_hat_max = zeros(layer_size,1);
-for i = 1:x_size
+for i = 1:layer_size
     f = zeros(x_size,1);
     f(i) = 1;
     tmp = linprog(f,A,bnq,Aeq,beq,lb,ub);
@@ -53,13 +51,23 @@ for j = 2:layers
     x_size{j} = x_size{j-1} + layer_size{j-1} + layer_size{j};
     Aeq = blkdiag([eye(layer_size{j}), -W{j}],Aeq);
     beq = [b{j}; beq];
-    ub{j} = [Inf*ones(layer_size{j},1); ...
-        max(0,z_hat_max{j-1}(1:layer_size{j-1})); ...
-        z_hat_max{j-1}];
-    lb{j} = [-Inf*ones(layer_size{j},1); ...
-        max(0,z_hat_min{j-1}(1:layer_size{j-1}));...
-        z_hat_min{j-1}];
+%     ub{j} = [Inf*ones(layer_size{j},1); ...
+%         max(0,z_hat_max{j-1}(1:layer_size{j-1})); ...
+%         z_hat_max{j-1}];
+%     lb{j} = [-Inf*ones(layer_size{j},1); ...
+%         max(0,z_hat_min{j-1}(1:layer_size{j-1}));...
+%         z_hat_min{j-1}];
     
+    ub{j} = [Inf*ones(layer_size{j},1); ...
+        max(0,z_hat_max{j-1}); ...
+        z_hat_max{j-1};...
+        ub{j-1}((layer_size{j-1}+1):size(ub{j-1},1))...
+        ];
+    lb{j} = [-Inf*ones(layer_size{j},1); ...
+        max(0,z_hat_min{j-1}); ...
+        z_hat_min{j-1};...
+        ub{j-1}((layer_size{j-1}+1):size(lb{j-1},1))...
+        ];
     
     % gradient and y intercept
     m = z_hat_max{j-1}./(z_hat_max{j-1} - z_hat_min{j-1});
@@ -95,13 +103,13 @@ for j = 2:layers
     
     bnq = [zeros(2*layer_size{j-1},1);c; bnq];
     
-    for i = 1:x_size{j}
+    for i = 1:layer_size{j}
         f = zeros(x_size{j},1);
         f(i) = 1;
         tmp = linprog(f,A,bnq,Aeq,beq,lb{j},ub{j});
-        if isempty(tmp)
-            break
-        end
+%         if isempty(tmp)
+%             break
+%         end
         z_hat_min{j}(i,1) = tmp(i);
         f(i) = -1;
         tmp = linprog(f,A,bnq,Aeq,beq,lb{j},ub{j});
