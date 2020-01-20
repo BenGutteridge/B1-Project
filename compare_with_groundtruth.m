@@ -3,8 +3,7 @@ function num_correct = compare_with_groundtruth(input)
 % 1x500 vector of whether each state is proven true (1) by counter-example
 % or false (0) by lack thereof
 
-gt = load('groundtruth.mat');
-groundtruth = gt.groundtruth;
+load('groundtruth.mat');
 
 % n.b. 0 means counter-example, 1 means no counter-example
 % for corresponding elements in input and gt:
@@ -34,4 +33,6 @@ disp('No INSUFFICIENTLY PROVEN TRUE:')
 disp(num_insufficient)
 disp('No. FAILED TO PROVE FALSE')
 disp(num_fails)
+
+
 
