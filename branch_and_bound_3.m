@@ -1,4 +1,4 @@
-function [flag, bab_time] = branch_and_bound(W, b, XMIN, XMAX)
+function [flag, bab_time, i, RESTARTED] = branch_and_bound_3(W, b, xmin, xmax)
 tic
 %% ORDER
 % set up output bounds for the whole domain (regular lpb)
@@ -14,19 +14,60 @@ tic
     % update subdomain input bounds (XMIN and XMAX)
     % update subdomain output bounds
 % at the end
+RESTART = 1;
+RESTARTED = 0;
+k = 10000;
+max_iter = 3000;
 
 % flag for whether we have reached a definitive answer
 COMPLETE = 0;
+
+% how the bounds are determined in each partitioning
+METHOD = 1;
+% 0: Unsound Method
+% 1: Interval Bound Propagation
+% 2: Linear Programming Bound
 % initiating
 flag = NaN;
 
-% set up output bounds for the whole domain (regular lpb)
-[YMIN, YMAX] = linear_programming_bound(W,b,XMIN,XMAX);
+while RESTART == 1
+RESTART = 0;
 
 i = 0;
+
+X_unsound = generate_inputs(xmax, xmin, k, 6);
+y = compute_nn_outputs(W,b,X_unsound);
+if max(y) > 0
+    flag = 0;
+    COMPLETE = 1;
+    break
+end
+
+% set up output bounds for the whole domain
+if METHOD == 2
+    [ymin, ymax] = linear_programming_bound(W,b,xmin,xmax);
+elseif METHOD == 1
+    [ymin, ymax] = interval_bound_propagation(W,b,xmin,xmax);
+end
+YMAX = ymax;
+YMIN = ymin;
+XMIN = xmin;
+XMAX = xmax;
+
 while COMPLETE == 0
+    if i == max_iter
+        METHOD = 2;
+        RESTART = 1;
+        RESTARTED = 1;
+        disp('RESETTING')
+%         flag = NaN;
+%         bab_time = toc
+%         COMPLETE = 1;
+        break
+    end
     i = i + 1;
-    disp(strcat('Iteration: ',num2str(i)))
+    %disp(strcat('Iteration: ',num2str(i)))
+    
     % idx is the index of the subdomain with the largest output ub, xbar
     [ymax, idx1] = max(YMAX);
     if ymax < 0
@@ -38,6 +79,16 @@ while COMPLETE == 0
     xbarmin = XMIN(idx1,:);
     xbarmax = XMAX(idx1,:);
     
+    % Unsound Method - try and find a counterexample
+    if METHOD == 2
+        X_unsound = generate_inputs(xbarmax, xbarmin, k, 6);
+        y = compute_nn_outputs(W,b,X_unsound);
+        if max(y) > 0
+            flag = 0;
+            COMPLETE = 1;
+            break
+        end
+    end
 % if we can't prove it true this way we create new subdomains
     % idx2 is index of dimension with longest relative length
     S = (xbarmax-xbarmin)./(xmax-xmin);
@@ -56,8 +107,23 @@ while COMPLETE == 0
 
     
     % find the bounds of the new subdomains using lpb
-    [y1min, y1max] = linear_programming_bound(W, b, x1barmin, x1barmax);
-    [y2min, y2max] = linear_programming_bound(W, b, x2barmin, x2barmax);
+    if METHOD == 2
+        [y2min, y2max] = ...
+            linear_programming_bound(W, b, x2barmin, x2barmax);
+        [y1min, y1max] = ...
+            linear_programming_bound(W, b, x1barmin, x1barmax);
+    
+    elseif METHOD == 1
+        [y2min, y2max] = ...
+            interval_bound_propagation(W, b, x2barmin, x2barmax);
+        [y1min, y1max] = ...
+            interval_bound_propagation(W, b, x1barmin, x1barmax);
+    
+    else
+        
+    end
+        
+    
     
     % see if we have found a counter-example
     if (y1min > 0) || (y2min > 0)
@@ -99,6 +165,8 @@ while COMPLETE == 0
         YMAX(idx1+1:size(YMAX,1))...
         ];
     
+end
+
 end
 
 if flag == 1

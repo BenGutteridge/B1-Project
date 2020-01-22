@@ -1,5 +1,4 @@
 function [y_min, y_max] = linear_programming_bound(W,b,xmin,xmax)
-tic
 xmin = xmin';
 xmax = xmax';
 layers = size(b,2);
@@ -90,4 +89,3 @@ end
 
 y_min = z_hat_min{j};
 y_max = z_hat_max{j};
-toc

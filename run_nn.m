@@ -17,19 +17,16 @@ while i <= no_of_files
     X = generate_inputs(xmax, xmin, k, input_vector_size);
     y = compute_nn_outputs(W,b,X);
     y_star_lb(i) = max(y);
-    %mean_lb(i) = mean(y);
-    
-    % if lower bound is positive, property proven false by counter-example
-    if y_star_lb(i) <= 0
-            results(i) = 1;
-    else
-            results(i) = 0;
-    end
     i = i + 1;
 end
+
+results = (y_star_lb - abs(y_star_lb))./(2*y_star_lb);
+
 time = toc;
+outputs.time = time;
 outputs.avg_time = time/no_of_files;
 outputs.average_lb = mean(y_star_lb);
+outputs.lb = y_star_lb;
 outputs.num_correct = compare_with_groundtruth(results);
 
 

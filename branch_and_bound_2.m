@@ -1,4 +1,4 @@
-function [flag, bab_time] = branch_and_bound(W, b, XMIN, XMAX)
+function [flag, bab_time, i] = branch_and_bound_2(W, b, xmin, xmax)
 tic
 %% ORDER
 % set up output bounds for the whole domain (regular lpb)
@@ -14,17 +14,47 @@ tic
     % update subdomain input bounds (XMIN and XMAX)
     % update subdomain output bounds
 % at the end
+RESTART = 1;
+RESTARTED = 0;
 
 % flag for whether we have reached a definitive answer
 COMPLETE = 0;
+
+% how the bounds are determined in each partitioning
+LOWER = 2;
+UPPER = 1;
+% 0: Unsound Method
+% 1: Interval Bound Propagation
+% 2: Linear Programming Bound
 % initiating
 flag = NaN;
 
-% set up output bounds for the whole domain (regular lpb)
-[YMIN, YMAX] = linear_programming_bound(W,b,XMIN,XMAX);
+while RESTART == 1
+RESTART = 0;
+
+% set up output bounds for the whole domain
+if UPPER == 2
+    [ymin, ymax] = linear_programming_bound(W,b,xmin,xmax);
+elseif UPPER == 1
+    [ymin, ymax] = interval_bound_propagation(W,b,xmin,xmax);
+end
+YMAX = ymax;
+YMIN = ymin;
+XMIN = xmin;
+XMAX = xmax;
 
 i = 0;
 while COMPLETE == 0
+    if i == 500
+        %UPPER = 2;
+        RESTART = 1;
+        RESTARTED = 1;
+        disp('RESETTING')
+        flag = NaN;
+        bab_time = toc
+        COMPLETE = 1;
+        break
+    end
     i = i + 1;
     disp(strcat('Iteration: ',num2str(i)))
     % idx is the index of the subdomain with the largest output ub, xbar
@@ -56,8 +86,23 @@ while COMPLETE == 0
 
     
     % find the bounds of the new subdomains using lpb
-    [y1min, y1max] = linear_programming_bound(W, b, x1barmin, x1barmax);
-    [y2min, y2max] = linear_programming_bound(W, b, x2barmin, x2barmax);
+    if UPPER == 2
+        [y2min, y2max] = ...
+            linear_programming_bound(W, b, x2barmin, x2barmax);
+        [y1min, y1max] = ...
+            linear_programming_bound(W, b, x1barmin, x1barmax);
+    
+    elseif UPPER == 1
+        [y2min, y2max] = ...
+            interval_bound_propagation(W, b, x2barmin, x2barmax);
+        [y1min, y1max] = ...
+            interval_bound_propagation(W, b, x1barmin, x1barmax);
+    
+    else
+        
+    end
+        
+    
     
     % see if we have found a counter-example
     if (y1min > 0) || (y2min > 0)
@@ -101,6 +146,10 @@ while COMPLETE == 0
     
 end
 
+end
+if RESTARTED == 1
+    disp('Restarted')
+end
 if flag == 1
     disp('Property is true, no counter-example exists')
 elseif flag == 0
